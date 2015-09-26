@@ -1,0 +1,40 @@
+__author__ = 'ssktotoro2'
+import requests
+from bs4 import BeautifulSoup
+from collections import namedtuple
+
+
+class SongScraper(object):
+    def __init__(self):
+        pass
+
+    def get_soup(self, url):
+        r = requests.get(url)
+        return BeautifulSoup(r.text, 'lxml')
+
+    def scrape_rap_genius(self, artist):
+        song_info = namedtuple('Song', ['album', 'title', 'lyrics'])
+        base_url = 'http://genius.com'
+        url = base_url+ '/artists/' + artist
+        soup = self.get_soup(url)
+
+        songs = []
+        for album_link in soup.select('div.artist_sidebar > ul.album_list > li > a'):
+            album_title = album_link.get_text()
+            album_url = base_url + album_link.get('href')
+            album_soup = self.get_soup(album_url)
+
+            # loop through songs in album
+            for song_link in album_soup.select('div.album_tracklist > ul.song_list > li > a'):
+                song_title = song_link.select('span > span.song_title')
+                song_title = song_title[0].get_text()
+
+                # We do not need the album art...
+                if 'Album Art' in song_title:
+                    continue
+
+                song_url = song_link.get('href')
+                song_soup = self.get_soup(song_url)
+                lyrics = song_soup.find('div', class_='lyrics').get_text()
+                songs.append(song_info(album_title, song_title, lyrics))
+        return songs

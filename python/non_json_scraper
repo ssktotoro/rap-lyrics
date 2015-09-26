@@ -1,4 +1,4 @@
-__author__ = 'ssktotoro2'
+__author__ = 'ssktotoro'
 import requests
 from bs4 import BeautifulSoup
 from collections import namedtuple

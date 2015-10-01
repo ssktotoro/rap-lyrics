@@ -17,26 +17,40 @@ def apply_lda(text, num_topics):
     tfidf = models.TfidfModel(corpus)
     corpus_tfidf = tfidf[corpus]
     lda = models.LdaModel(corpus, id2word=corpus_dictionary, num_topics=num_topics, passes=10)
-    corpus_Lda = lda[corpus_tfidf]
+    corpus_lda = lda[corpus_tfidf]
+    scipy_lda = gensim.matutils.corpus2csc(corpus_lda)
+    ## check if sklearn accepts sparse vectors
+    dense_lda = scipy_lda.todense().T
     test_Lda_doc = []
-    for doc in corpus_Lda:
-        test_Lda_doc.append(doc)
+    
+    for doc in corpus_lda:
+        test_lda_doc.append(doc)
     max_prob_topic = []
-    for doc in test_Lda_doc:
+    for doc in test_lda_doc:
         if len(doc) > 0:
             max_prob_topic.append(max(doc))
         else:
             max_prob_topic.append((0,0))
     max_topic_probability = pd.DataFrame(max_prob_topic)
-    return max_topic_probability
+    return max_topic_probability, dense_lda
 
+def get_topics(topic):
+    le = preprocessingLabelEncoder()
+    le.fit(list(topic.unique()))
+    topic_indices = le.tranform(topic.unique())
+    return topic_indices
+
+def apply_scaled_tsne(array, verbosity):
+    tsne_embedding = TSNE(verbose=verbosity).fit_transform(array)
+    scaled_tsne_embed = StandardScaler().fit_transform(tsne_embedding)
+    
 
 def show_tsne_viz(x, y, topics, words):
     """
 
     :param x:
     :param y:
-    :param topics:
+    :param topics: should change to topic indices to match earlier function
     :param words:
     :return:
     """

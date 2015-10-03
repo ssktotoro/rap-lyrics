@@ -1,7 +1,7 @@
-__author__ = 'ssktotoro'
+from collections import namedtuple
+
 import requests
 from bs4 import BeautifulSoup
-from collections import namedtuple
 
 
 class SongScraper(object):
@@ -15,7 +15,7 @@ class SongScraper(object):
     def scrape_rap_genius(self, artist):
         song_info = namedtuple('Song', ['album', 'title', 'lyrics'])
         base_url = 'http://genius.com'
-        url = base_url+ '/artists/' + artist
+        url = base_url + '/artists/' + artist
         soup = self.get_soup(url)
 
         songs = []

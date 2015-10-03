@@ -1,27 +1,33 @@
-__author__ = 'ssktotoro2'
-
 from string import punctuation
-from nltk.stem.wordnet import WordNetLemmatizer
-wordnet_lemmatizer = WordNetLemmatizer()
-from nltk.stem.porter import PorterStemmer
-porter_stemmer = PorterStemmer()
 import re
-from gensim import corpora, models
+
+from nltk.stem.wordnet import WordNetLemmatizer
+from nltk.stem.porter import PorterStemmer
 import pandas as pd
 import bokeh.plotting as bp
-from bokeh.objects import HoverTool
+from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import StandardScaler
+from sklearn.manifold import TSNE
+
+from gensim import corpora, models
+from gensim import matutils
+from bokeh.models import HoverTool
+
+wordnet_lemmatizer = WordNetLemmatizer()
+porter_stemmer = PorterStemmer()
 
 def apply_lda(text, num_topics):
     corpus_dictionary = corpora.Dictionary(text)
+
     corpus = [corpus_dictionary.doc2bow(words) for words in text]
     tfidf = models.TfidfModel(corpus)
     corpus_tfidf = tfidf[corpus]
-    lda = models.LdaModel(corpus, id2word=corpus_dictionary, num_topics=num_topics, passes=10)
+    lda = models.LdaModel(corpus, id2word=corpus_dictionary, num_topics=num_topics, iterations=1000)
     corpus_lda = lda[corpus_tfidf]
-    scipy_lda = gensim.matutils.corpus2csc(corpus_lda)
+    scipy_lda = matutils.corpus2csc(corpus_lda)
     ## check if sklearn accepts sparse vectors
     dense_lda = scipy_lda.todense().T
-    test_Lda_doc = []
+    test_lda_doc = []
     
     for doc in corpus_lda:
         test_lda_doc.append(doc)
@@ -32,10 +38,13 @@ def apply_lda(text, num_topics):
         else:
             max_prob_topic.append((0,0))
     max_topic_probability = pd.DataFrame(max_prob_topic)
+    max_topic_probability.columns = ['topic', 'probability']
+    max_topic_probability['top_ten_words'] = max_topic_probability['topic'].apply(lambda a: lda.show_topic(a, topn=10))
     return max_topic_probability, dense_lda
 
+
 def get_topics(topic):
-    le = preprocessingLabelEncoder()
+    le = LabelEncoder()
     le.fit(list(topic.unique()))
     topic_indices = le.tranform(topic.unique())
     return topic_indices
@@ -45,7 +54,7 @@ def apply_scaled_tsne(array, verbosity):
     scaled_tsne_embed = StandardScaler().fit_transform(tsne_embedding)
     
 
-def show_tsne_viz(x, y, topics, words):
+def show_tsne_viz(x_embedding, y_embedding, topics, words):
     """
 
     :param x:
@@ -76,17 +85,26 @@ def show_tsne_viz(x, y, topics, words):
 
 def preprocess_lyrics(lyrics):
     """
-
+    splits on verse, and others whyyy
     :param lyrics:
     :return:
     """
     nlyrics = lyrics.str.lower()
-    nlyrics = nlyrics.apply(lambda a: re.sub(r'\b\w{1,3}\b', '', a))
     nlyrics = nlyrics.apply(lambda a: (porter_stemmer.stem(wordnet_lemmatizer.lemmatize(a))))
     for word in punctuation:
         nlyrics = nlyrics.str.replace(word, '')
+    nlyrics = nlyrics.apply(lambda a: a.encode('ascii', 'ignore'))
     nlyrics = nlyrics.apply(lambda a: re.sub(' +', ' ', a))
-    glyrics_list = '\n'.join(nlyrics)
-    glyrics_list = glyrics_list.split('\n')
-    glyrics_list = [[word for word in verse.split()] for verse in glyrics_list]
+
+    # regex expression can accomplish the same thing, but ti will be slower...
+    nlyrics = nlyrics.str.replace('intro', 'split_on_me')
+    nlyrics = nlyrics.str.replace('verse', 'split_on_me')
+    nlyrics = nlyrics.str.replace('outro', 'split_on_me')
+    nlyrics = nlyrics.str.replace('bridge', 'split_on_me')
+    nlyrics = nlyrics.str.replace('hook', 'split_on_me')
+    glyrics_list = 'new_song'.join(nlyrics)
+    glyrics_list = glyrics_list.replace('new_song', 'split_on_me')
+    glyrics_list = glyrics_list.split('split_on_me')
+
+    glyrics_list = [[word for word in verse.split() if len(word)>3] for verse in glyrics_list]
     return glyrics_list
